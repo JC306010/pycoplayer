@@ -25,10 +25,3 @@ class AIScreenshot:
     def transform_to_tensor(self):
         self.tensor = self.transform(self.PILImage)
         self.tensor.unsqueeze(0)
-        print(self.tensor)
-
-if __name__ == "__main__":
-    power = AIScreenshot()
-    power.take_screenshot()
-    power.process_to_PIL()
-    power.transform_to_tensor()
