@@ -11,6 +11,7 @@ class AIScreenshot:
         self.screenshot = None
         self.PILImage = None
         self.tensor = None
+        self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.04465), (0.2470, 0.2435, 0.2616))])
 
     def take_screenshot(self, region=False, region_area=(1920, 1080)):
         if (region == True):
@@ -22,4 +23,12 @@ class AIScreenshot:
         self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.bgra, "raw", "BGRX")
 
     def transform_to_tensor(self):
-        self.tensor = torchvision.transforms.functional.pil_to_tensor(self.PILImage)
+        self.tensor = self.transform(self.PILImage)
+        self.tensor.unsqueeze(0)
+        print(self.tensor)
+
+if __name__ == "__main__":
+    power = AIScreenshot()
+    power.take_screenshot()
+    power.process_to_PIL()
+    power.transform_to_tensor()
