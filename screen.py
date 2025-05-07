@@ -1,9 +1,6 @@
 import mss
-import torchvision
-import numpy as np
 from PIL import Image
 from torchvision import transforms
-import torchvision.transforms.functional
 
 class AIScreenshot:
     def __init__(self):
@@ -13,7 +10,7 @@ class AIScreenshot:
         self.tensor = None
         self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.04465), (0.2470, 0.2435, 0.2616))])
 
-    def take_screenshot(self, region=False, region_area=(1920, 1080)):
+    def take_screenshot(self, region=False, region_area=(640, 480)):
         if (region == True):
             self.screenshot = self.sct.grab(region_area)
         else:
@@ -25,10 +22,3 @@ class AIScreenshot:
     def transform_to_tensor(self):
         self.tensor = self.transform(self.PILImage)
         self.tensor.unsqueeze(0)
-        print(self.tensor)
-
-if __name__ == "__main__":
-    power = AIScreenshot()
-    power.take_screenshot()
-    power.process_to_PIL()
-    power.transform_to_tensor()
