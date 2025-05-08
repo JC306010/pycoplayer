@@ -22,3 +22,6 @@ class AIScreenshot:
     def transform_to_tensor(self):
         self.tensor = self.transform(self.PILImage)
         self.tensor.unsqueeze(0)
+        
+    def show_screenshot(self):
+        self.PILImage.show()
