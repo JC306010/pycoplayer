@@ -1,167 +1,149 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import cv2
-import mss
 import torchvision.transforms as T
-from pynput.mouse import Controller as MouseController
-from pynput.keyboard import Controller as KeyboardController
+import numpy as np
+import mss
 import time
 import random
+from pynput.keyboard import Controller as KeyboardController, Key
 from collections import deque
 
-# Define a small CNN (example model)
+# === CONFIGURATION ===
+FPS = 60
+FRAME_TIME = 1 / FPS
+SCREEN_REGION = {"top": 100, "left": 100, "width": 640, "height": 480}
+MOVEMENT_KEYS = ['w', 'a', 's', 'd']
+ACTION_KEYS = [' ', 'j']
+
+# Define multi-key movement combinations
+ACTIONS = [
+    [],                 # No movement
+    ['w'],
+    ['a'],
+    ['s'],
+    ['d'],
+    ['w', 'a'],
+    ['w', 'd'],
+    ['s', 'a'],
+    ['s', 'd'],
+    ['w', ' '],
+    ['d', 'j'],
+    ['w', 'd', ' '],
+    ['a', ' '],
+    ['w', 'j'],
+]
+NUM_ACTIONS = len(ACTIONS)
+
+# === KEYBOARD SETUP ===
+keyboard = KeyboardController()
+held_keys = set()
+
+# === NEURAL NETWORK (DQN) ===
 class DQN(nn.Module):
-    def __init__(self, num_actions):
+    def __init__(self):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=8, stride=4)  # First convolution layer
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2) # Second convolution layer
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1) # Third convolution layer
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)  # Fully connected layer
-        self.out = nn.Linear(512, num_actions)  # Output layer for Q-values of actions
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.out = nn.Linear(512, NUM_ACTIONS)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))  # Apply relu activation after first conv layer
-        x = F.relu(self.conv2(x))  # Apply relu after second conv layer
-        x = F.relu(self.conv3(x))  # Apply relu after third conv layer
-        x = x.view(x.size(0), -1)  # Flatten the output of conv layers
-        x = F.relu(self.fc1(x))    # Apply relu to fully connected layer
-        return self.out(x)  # Return Q-values for each action
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.out(x)
 
-# Image preprocessing
+# === SCREEN CAPTURE & PREPROCESSING ===
 transform = T.Compose([
-    T.ToPILImage(),        # Convert from numpy to PIL image
-    T.Grayscale(),         # Convert to grayscale (simplifies input)
-    T.Resize((84, 84)),     # Resize to 84x84 (standard for many RL setups)
-    T.ToTensor()           # Convert to tensor (from PIL)
+    T.ToPILImage(),
+    T.Grayscale(),
+    T.Resize((84, 84)),
+    T.ToTensor()
 ])
 
-# Screenshot function
-def grab_screen(region=None):
+def grab_screen(region):
     with mss.mss() as sct:
-        screen = np.array(sct.grab(region))
-        screen = screen[..., :3]  # Drop alpha channel (transparency)
+        screen = np.array(sct.grab(region))[:, :, :3]
         return screen
 
-# Setup keyboard and mouse controllers
-keyboard = KeyboardController()
-mouse = MouseController()
+# === KEY MANAGEMENT ===
+def press_key(key):
+    try:
+        keyboard.press(key)
+        held_keys.add(key)
+    except:
+        pass
 
-# Define action mappings (for example)
-action_keys = ['up', 'down', 'left', 'right']
+def release_key(key):
+    try:
+        keyboard.release(key)
+        if key in held_keys:
+            held_keys.remove(key)
+    except:
+        pass
 
-# Store experiences
-experience_replay = deque(maxlen=10000)  # Experience replay buffer
-batch_size = 32  # Batch size for training
-gamma = 0.99  # Discount factor
-epsilon = 1.0  # Exploration factor
-epsilon_min = 0.01
-epsilon_decay = 0.995
+def perform_action(keys_to_press):
+    global held_keys
 
-# Training setup
-model = DQN(num_actions=4)  # 4 possible actions (e.g., up, down, left, right)
-target_model = DQN(num_actions=4)  # Target model for stability in Q-learning
-target_model.load_state_dict(model.state_dict())  # Initialize target model with same weights
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    # Separate movement keys and action keys
+    new_movement_keys = [k for k in keys_to_press if k in MOVEMENT_KEYS]
+    new_action_keys = [k for k in keys_to_press if k in ACTION_KEYS]
 
-def perform_action(action, hold_time=1.0):
-    if action == 0:  # 'up'
-        keyboard.press('w')
-        time.sleep(hold_time)
-        keyboard.release('w')
-    elif action == 1:  # 'down'
-        keyboard.press('s')
-        time.sleep(hold_time)
-        keyboard.release('s')
-    elif action == 2:  # 'left'
-        keyboard.press('a')
-        time.sleep(hold_time)
-        keyboard.release('a')
-    elif action == 3:  # 'right'
-        keyboard.press('d')
-        time.sleep(hold_time)
-        keyboard.release('d')
-    elif action == 4: # jump
-        keyboard.press(' ')
-        time.sleep(hold_time)
-        keyboard.release(' ')
-    elif action == 5: # action
-        keyboard.press('j')
-        time.sleep(hold_time)
-        keyboard.release('j')
+    # Release movement keys not in the new set
+    for key in held_keys.copy():
+        if key in MOVEMENT_KEYS and key not in new_movement_keys:
+            release_key(key)
 
-def epsilon_greedy_action(state):
-    """Choose action based on epsilon-greedy policy."""
-    if np.random.rand() <= epsilon:
-        # Explore: choose random action
-        return random.randrange(4)
-    else:
-        # Exploit: choose best action based on model
-        with torch.no_grad():
-            q_values = model(state)
-            return torch.argmax(q_values, dim=1).item()
+    # Press new movement keys
+    for key in new_movement_keys:
+        if key not in held_keys:
+            press_key(key)
 
-def train():
-    if len(experience_replay) < batch_size:
-        return  # Not enough experiences to sample a batch
+    # Tap action keys briefly
+    for key in new_action_keys:
+        press_key(key)
+        time.sleep(0.05)
+        release_key(key)
 
-    # Sample a batch of experiences
-    batch = random.sample(experience_replay, batch_size)
-    states, actions, rewards, next_states, dones = zip(*batch)
+# === AGENT DECISION MAKING ===
+def select_action(state, epsilon=0.05):
+    if random.random() < epsilon:
+        return random.randint(0, NUM_ACTIONS - 1)
+    with torch.no_grad():
+        q_values = model(state)
+        return torch.argmax(q_values, dim=1).item()
 
-    # Convert to torch tensors
-    states = torch.stack(states)
-    next_states = torch.stack(next_states)
-    actions = torch.tensor(actions)
-    rewards = torch.tensor(rewards)
-    dones = torch.tensor(dones)
+# === MODEL SETUP ===
+model = DQN()
+model.eval()
 
-    # Get Q-values for current states from the model
-    q_values = model(states)
-    next_q_values = target_model(next_states)
-    next_q_values = next_q_values.max(1)[0]
+# === MAIN LOOP ===
+print("Starting AI control loop...")
+try:
+    while True:
+        start_time = time.time()
 
-    # Get the Q-value for the taken action
-    target_q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+        # Capture and process screen
+        screen = grab_screen(SCREEN_REGION)
+        image_tensor = transform(screen).unsqueeze(0)
 
-    # Compute the target Q-value: reward + gamma * max(next_state_Q_values)
-    target = rewards + (gamma * next_q_values * (1 - dones))
+        # Decide action
+        action_index = select_action(image_tensor)
+        keys_to_press = ACTIONS[action_index]
 
-    # Compute loss and update the model
-    loss = F.mse_loss(target_q_values, target)
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+        # Execute action
+        perform_action(keys_to_press)
 
-    # Update the epsilon value for exploration
-    global epsilon
-    if epsilon > epsilon_min:
-        epsilon *= epsilon_decay
+        # Maintain 60 FPS
+        elapsed = time.time() - start_time
+        if elapsed < FRAME_TIME:
+            time.sleep(FRAME_TIME - elapsed)
 
-# Example usage of the model
-while True:
-    img = grab_screen({"top": 100, "left": 100, "width": 640, "height": 480})  # Capture a screenshot
-    img = transform(img).unsqueeze(0)  # Preprocess and add batch dimension
-
-    # Choose action using epsilon-greedy policy
-    action = epsilon_greedy_action(img)
-    
-    # Perform the action in the game
-    perform_action(action)
-
-    # Get reward and next state (this is game-dependent, so you'll need to integrate it)
-    reward = 1  # Placeholder, replace with actual game feedback (reward from the game)
-    done = False  # Placeholder, check if the game is over
-    next_img = grab_screen({"top": 100, "left": 100, "width": 640, "height": 480})  # Capture next screenshot
-    next_img = transform(next_img).unsqueeze(0)
-
-    # Store experience in replay buffer
-    experience_replay.append((img, action, reward, next_img, done))
-
-    # Train the model with the stored experiences
-    train()
-
-    # Optionally update the target model every few steps
-    if random.random() < 0.05:
-        target_model.load_state_dict(model.state_dict())
+except KeyboardInterrupt:
+    print("Stopping...")
+    for key in held_keys.copy():
+        release_key(key)
