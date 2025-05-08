@@ -24,4 +24,5 @@ class AIScreenshot:
         self.tensor.unsqueeze(0)
         
     def show_screenshot(self):
+        self.process_to_PIL()
         self.PILImage.show()
