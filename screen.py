@@ -1,6 +1,5 @@
 import mss
 import easyocr
-import matplotlib.pyplot as plt
 from PIL import Image
 from torchvision import transforms
 import numpy
@@ -20,7 +19,7 @@ class AIScreenshot:
             self.screenshot = self.sct.grab(self.sct.monitors[0])
 
     def process_to_PIL(self):
-        self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.bgra, "raw", "BGRX")
+        self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.rgb)
 
     def transform_to_tensor(self):
         self.tensor = self.transform(self.PILImage)
@@ -28,6 +27,10 @@ class AIScreenshot:
         
     def show_screenshot(self):
         self.PILImage.show()
+        
+class ScreenRecorder:
+    def __init__():
+        pass
 
 class CharacterRecognition:
     def __init__(self):
@@ -37,9 +40,4 @@ class CharacterRecognition:
         reader = easyocr.Reader(['en'], gpu=True)
         image = numpy.array(image)
         
-        results = reader.readtext(image)
-        for (bbox, text, prob) in results:
-            print(f"Text: {text}, Probability: {prob}")
-            (top_left, top_right, bottom_right, bottom_left) = bbox
-            top_left, top_right = (int(top_left[0]), int(top_left[1])), (int(top_right[0]), int(top_right[1]))
-            bottom_left, bottom_right = (int(bottom_left[0]), int(bottom_left[1])), (int(bottom_right[0]), int(bottom_right[1]))
+        results = reader.readtext(image, batch_size=5)
