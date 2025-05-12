@@ -1,5 +1,6 @@
 import mss
-import easyocr
+import ocr.main
+import ocr
 from PIL import Image
 from torchvision import transforms
 import numpy
@@ -37,7 +38,6 @@ class CharacterRecognition:
         pass
 
     def read_screen(self, image: Image):
-        reader = easyocr.Reader(['en'], gpu=True)
         image = numpy.array(image)
         
-        results = reader.readtext(image, batch_size=5)
+
