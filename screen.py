@@ -18,7 +18,7 @@ class AIScreenshot:
             self.process_to_PIL()
             self.process_to_array()
         else:
-            self.screenshot = self.sct.grab(self.sct.monitors[0])
+            self.screenshot = self.sct.grab(self.sct.monitors[-1])
             self.process_to_PIL()
             self.process_to_array()
 
