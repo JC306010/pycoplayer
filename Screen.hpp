@@ -2,11 +2,11 @@
 
 namespace cppcope
 {
-    struct BadassVector
+    struct Vec2
     {
-        BadassVector() : X(0), Y(0) {}
-        BadassVector(uint32_t x, uint32_t y) : X(x), Y(y) {}
-        ~BadassVector() {}
+        Vec2() : X(0), Y(0) {}
+        Vec2(uint32_t x, uint32_t y) : X(x), Y(y) {}
+        ~Vec2() {}
         uint32_t X;
         uint32_t Y;
     };
@@ -17,7 +17,7 @@ namespace cppcope
         Screen();
         ~Screen();
     private:
-        BadassVector GetScreenDimensions();
+        Vec2 GetScreenDimensions();
         
     };
 }
