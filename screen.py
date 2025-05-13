@@ -1,6 +1,4 @@
 import mss
-import ocr.main
-import ocr
 from PIL import Image
 from torchvision import transforms
 import numpy
@@ -11,17 +9,26 @@ class AIScreenshot:
         self.screenshot = None
         self.PILImage = None
         self.tensor = None
+        self.array = None
         self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.04465), (0.2470, 0.2435, 0.2616))])
 
     def take_screenshot(self, region=False, region_area=(150, 100, 640, 480)):
         if (region == True):
             self.screenshot = self.sct.grab(region_area)
+            self.process_to_PIL()
+            self.process_to_array()
         else:
-            self.screenshot = self.sct.grab(self.sct.monitors[0])
+            self.screenshot = self.sct.grab(self.sct.monitors[-1])
+            self.process_to_PIL()
+            self.process_to_array()
+
 
     def process_to_PIL(self):
         self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.rgb)
-
+        
+    def process_to_array(self):
+        self.array = numpy.array(self.screenshot)
+    
     def transform_to_tensor(self):
         self.tensor = self.transform(self.PILImage)
         self.tensor.unsqueeze(0)
