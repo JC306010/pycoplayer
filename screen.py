@@ -3,6 +3,11 @@ from PIL import Image
 from torchvision import transforms
 import numpy
 import cv2
+from enum import Enum
+
+class ImageType(Enum):
+    PILImage = 0,
+    GrayscaleImage = 1,
 
 class AIScreenshot:
     def __init__(self):
@@ -23,12 +28,10 @@ class AIScreenshot:
             self.screenshot = self.sct.grab(region_area)
             self.process_to_PIL()
             self.process_to_array()
-            self.transform_to_tensor()
         else:
             self.screenshot = self.sct.grab(self.sct.monitors[-1])
             self.process_to_PIL()
             self.process_to_array()
-            self.transform_to_tensor()
 
     def process_to_PIL(self):
         self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.rgb)
@@ -36,16 +39,22 @@ class AIScreenshot:
     def process_to_array(self):
         self.array = numpy.array(self.screenshot)
     
-    def transform_to_tensor(self):
-        self.transform_to_grayscale()
-        self.tensor = self.transform(self.PILImage.convert("L"))
-        self.tensor.unsqueeze(0)
+    def transform_to_tensor(self, image_type: ImageType):
+
+        if (image_type == ImageType.PILImage):
+            self.tensor = self.transform(self.PILImage)
+        else:
+            self.tensor = self.transform(self.PILImage.convert("L"))
+        
+        return self.tensor
         
     def show_screenshot(self):
         self.PILImage.show()
         
     def transform_to_grayscale(self):
         self.image_grayscale = cv2.cvtColor(self.array, cv2.COLOR_RGB2GRAY)
+        
+        return self.image_grayscale
         
 class ScreenRecorder:
     def __init__():
