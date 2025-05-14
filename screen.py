@@ -2,6 +2,12 @@ import mss
 from PIL import Image
 from torchvision import transforms
 import numpy
+import cv2
+from enum import Enum
+
+class ImageType(Enum):
+    PILImage = 0,
+    GrayscaleImage = 1,
 
 class AIScreenshot:
     def __init__(self):
@@ -10,8 +16,13 @@ class AIScreenshot:
         self.PILImage = None
         self.tensor = None
         self.array = None
-        self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.04465), (0.2470, 0.2435, 0.2616))])
-
+        self.transform = transforms.Compose([transforms.RandomHorizontalFlip(),
+                                        transforms.RandomRotation(20),
+                                        transforms.Resize(size=(224,224)),
+                                        transforms.ToTensor(),
+                                        transforms.Normalize((0.5,),(0.5,))])
+        self.image_grayscale = None
+        
     def take_screenshot(self, region=False, region_area=(150, 100, 640, 480)):
         if (region == True):
             self.screenshot = self.sct.grab(region_area)
@@ -22,19 +33,28 @@ class AIScreenshot:
             self.process_to_PIL()
             self.process_to_array()
 
-
     def process_to_PIL(self):
         self.PILImage = Image.frombytes("RGB", self.screenshot.size, self.screenshot.rgb)
         
     def process_to_array(self):
         self.array = numpy.array(self.screenshot)
     
-    def transform_to_tensor(self):
-        self.tensor = self.transform(self.PILImage)
-        self.tensor.unsqueeze(0)
+    def transform_to_tensor(self, image_type: ImageType):
+
+        if (image_type == ImageType.PILImage):
+            self.tensor = self.transform(self.PILImage)
+        else:
+            self.tensor = self.transform(self.PILImage.convert("L"))
+        
+        return self.tensor
         
     def show_screenshot(self):
         self.PILImage.show()
+        
+    def transform_to_grayscale(self):
+        self.image_grayscale = cv2.cvtColor(self.array, cv2.COLOR_RGB2GRAY)
+        
+        return self.image_grayscale
         
 class ScreenRecorder:
     def __init__():
@@ -47,4 +67,3 @@ class CharacterRecognition:
     def read_screen(self, image: Image):
         image = numpy.array(image)
         
-
