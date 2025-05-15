@@ -6,9 +6,11 @@ import torch
 import coolai
 
 screens = screen.AIScreenshot()
-screens.take_screenshot()
+screens.take_screenshot(region=True, region_area=(480, 270, 720, 480))
 tensor = screens.transform_to_tensor(ImageType.GrayscaleImage)
-input_batch = tensor.unsqueeze(0)
+pool = torch.nn.MaxPool2d(2, 2)
+downsample_tensor = pool(tensor)
+input_batch = downsample_tensor.unsqueeze(0)
 input_batch = input_batch.to('device')
 model = coolai.NeuralNetwork(input_batch, )
 
