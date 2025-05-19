@@ -6,10 +6,10 @@ import torch
 import coolai
 
 screens = screen.AIScreenshot()
-screens.take_screenshot(region=True, region_area=(480, 270, 720, 480))
+screens.take_screenshot(region=True, region_area=(480, 270, 240, 240))
 tensor = screens.transform_to_tensor(ImageType.GrayscaleImage)
 pool = torch.nn.MaxPool2d(2, 2)
-downsample_tensor = pool(tensor)
+downsample_tensor = pool(tensor) # image output (120, 120)
 input_batch = downsample_tensor.unsqueeze(0)
 input_batch = input_batch.to('device')
 model = coolai.NeuralNetwork(input_batch, )
@@ -19,4 +19,4 @@ model = coolai.NeuralNetwork(input_batch, )
 # resnet_model.eval()
 
 
-cv2.destroyAllWindows()
+# cv2.destroyAllWindows()
