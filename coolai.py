@@ -12,7 +12,7 @@ class Optimizer:
             self.optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)
             
     def estimate(self):
-        self.model.
+        pass
 
 class NeuralNetwork(torch.nn.Module):
     def __init__(self, input_dims, output_dims):
