@@ -13,6 +13,7 @@ Region = {
 
 screens = screen.AIScreenshot()
 screens.take_screenshot(region=True, region_area=Region)
+screens.show_screenshot(ImageType.GrayscaleImage)
 
 # tensor = screens.transform_to_tensor(ImageType.GrayscaleImage)
 # pool = torch.nn.MaxPool2d(2, 2)

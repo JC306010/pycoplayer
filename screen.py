@@ -55,8 +55,11 @@ class AIScreenshot:
         
         return self.tensor
         
-    def show_screenshot(self):
-        self.PILImage.show()
+    def show_screenshot(self, image_type: ImageType):
+        if (image_type == ImageType.PILImage):
+            self.PILImage.show()
+        else:
+            self.PILImage.convert("L").show()
         
     def transform_to_grayscale(self):
         self.image_grayscale = cv2.cvtColor(self.array, cv2.COLOR_RGB2GRAY)
