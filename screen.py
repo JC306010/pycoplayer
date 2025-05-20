@@ -8,6 +8,13 @@ from enum import Enum
 class ImageType(Enum):
     PILImage = 0,
     GrayscaleImage = 1,
+    
+Region = {
+    "top": 300,
+    "left": 1150,
+    "width": 1500,
+    "height": 500
+}
 
 class AIScreenshot:
     def __init__(self):
@@ -23,13 +30,13 @@ class AIScreenshot:
                                         transforms.Normalize((0.5,),(0.5,))])
         self.image_grayscale = None
         
-    def take_screenshot(self, region=False, region_area=(150, 100, 640, 480)):
+    def take_screenshot(self, region=False, region_area=Region):
         if (region == True):
             self.screenshot = self.sct.grab(region_area)
             self.process_to_PIL()
             self.process_to_array()
         else:
-            self.screenshot = self.sct.grab(self.sct.monitors[-1])
+            self.screenshot = self.sct.grab(self.sct.monitors[1])
             self.process_to_PIL()
             self.process_to_array()
 
