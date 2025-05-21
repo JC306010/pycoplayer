@@ -31,7 +31,7 @@ class NeuralNetwork(torch.nn.Module):
                                    torch.nn.Conv2d(64, 64, 3, 1),
                                    torch.nn.ReLU(),
                                    torch.nn.Flatten(),
-                                   torch.nn.Linear(5184, 512),
+                                   torch.nn.Linear(64 * 11 * 11, 512),
                                    torch.nn.ReLU(),
                                    torch.nn.Linear(512, output_dims))
         
