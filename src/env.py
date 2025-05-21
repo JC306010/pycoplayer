@@ -1,4 +1,5 @@
 import gymnasium as gym
+import keyboard
 
 env = gym.make("CarRacing-v3",
                render_mode="human",
@@ -8,10 +9,13 @@ env = gym.make("CarRacing-v3",
 observation, info = env.reset()
 
 while True:
-    action = env.action_space.sample()  # Random actions
+    action = env.action_space.sample()
     observation, reward, terminated, truncated, info = env.step(action)
     
     if terminated or truncated:
         observation, info = env.reset()
+    
+    if keyboard.is_pressed("a"):
+        break
     
 env.close()
