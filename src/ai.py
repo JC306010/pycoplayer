@@ -1,6 +1,7 @@
 import torch
 import torch.optim.optimizer
 import torchvision.models
+import gymnasium
 
 class Optimizer:
     def __init__(self, model: torch.nn.Module, optimizer_type="adam"):
@@ -36,5 +37,17 @@ class NeuralNetwork(torch.nn.Module):
                                    torch.nn.Linear(512, output_dims))
         
 class DeepQLearning():
-    def __init__(self):
-        pass
+    def __init__(self, 
+                 env: gymnasium.Env, 
+                 learning_rate: float, 
+                 initial_epsilon: float, 
+                 final_epsilon: float, 
+                 epsilon_decay: float, 
+                 discount_factor: float):
+        self.env = env
+        self.learning_rate = learning_rate
+        self.initial_epsilon = initial_epsilon
+        self.final_epsilon = final_epsilon
+        self.epsilon_decay = epsilon_decay
+        self.discount_factor = discount_factor
+        
