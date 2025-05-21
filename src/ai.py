@@ -34,3 +34,7 @@ class NeuralNetwork(torch.nn.Module):
                                    torch.nn.Linear(5184, 512),
                                    torch.nn.ReLU(),
                                    torch.nn.Linear(512, output_dims))
+        
+class DeepQLearning():
+    def __init__(self):
+        pass

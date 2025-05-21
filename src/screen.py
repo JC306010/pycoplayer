@@ -62,7 +62,7 @@ class AIScreenshot:
             self.PILImage.convert("L").show()
         
     def transform_to_grayscale(self):
-        self.image_grayscale = cv2.cvtColor(self.array, cv2.COLOR_RGB2GRAY)
+        self.image_grayscale = self.PILImage.convert("L")
         
         return self.image_grayscale
         
