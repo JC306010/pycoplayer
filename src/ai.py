@@ -59,11 +59,11 @@ class DeepQLearning():
         if (numpy.random.random() < self.epsilon):
             return self.env.action_space.sample()
         else:
-            return int(numpy.argmax(self.q_values[obs]))
+            return int(numpy.max(self.q_values[obs]))
         
     def step(self, obs: tuple[int, int, bool], action: int, reward: float, next_obs: tuple[int, int, bool]):
-        q_value = numpy.argmax(self.q_values[next_obs])
-        current_q_value = numpy.argmax(self.q_values[obs])
+        q_value = numpy.max(self.q_values[next_obs])
+        current_q_value = numpy.max(self.q_values[obs])
         temporal_difference = current_q_value + self.epsilon * (reward + self.discount_rate * q_value) - q_value
         self.q_values[obs][action] = self.q_values[obs][action] + self.learning_rate * temporal_difference
         self.training_error.append(temporal_difference)
