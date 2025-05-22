@@ -26,9 +26,9 @@ for episode in range(episodes):
 
         done = terminated or truncated
         
-        if keyboard.is_pressed("q"):
-            pressed = True
-            break
+        # if keyboard.is_pressed("q"):
+        #     pressed = True
+        #     break
         
     agent.decay_epsilon()
         
