@@ -62,10 +62,12 @@ class DeepQLearning():
             return int(numpy.max(self.q_values[obs]))
         
     def step(self, obs: tuple[int, int, bool], action: int, reward: float, next_obs: tuple[int, int, bool]):
-        q_value = numpy.max(self.q_values[next_obs])
-        current_q_value = numpy.max(self.q_values[obs])
+        next_obs_key = tuple(next_obs.flatten())
+        q_value = numpy.max(self.q_values[next_obs_key])
+        obs_key = tuple(obs.flatten())
+        current_q_value = numpy.max(self.q_values[obs_key])
         temporal_difference = current_q_value + self.epsilon * (reward + self.discount_rate * q_value) - q_value
-        self.q_values[obs][action] = self.q_values[obs][action] + self.learning_rate * temporal_difference
+        self.q_values[obs_key][action] = self.q_values[obs_key][action] + self.learning_rate * temporal_difference
         self.training_error.append(temporal_difference)
         
     def decay_epsilon(self):
