@@ -18,25 +18,38 @@ class Optimizer:
         pass
 
 class NeuralNetwork(torch.nn.Module):
-    def __init__(self, input_dims, output_dims):
+    def __init__(self, input_dims, hidden_dims, output_dims, dropout):
+        # 96x96 RGB (to be Grayscaled) image
+        # The reward is -0.1 every frame and +1000/N for every track tile visited, 
+        # where N is the total number of tiles visited in the track. 
+        # For example, if you have finished in 732 frames, your reward is 1000 - 0.1*732 = 926.8 points.
+
         super(NeuralNetwork, self).__init__()
-        # self.resnet = resnet
-        self.input_dims = input_dims
-        self.device = torch.accelerator.current_accelerator().type if torch.accelerator.current_accelerator() else "cpu"
-        channels = input_dims[0]
-        self.output = torch.nn.functional.log_softmax(self.forward(channels, output_dims))
+        self.layer1 = torch.nn.Linear(input_dims, hidden_dims)
+        self.layer2 = torch.nn.Linear(hidden_dims, output_dims)
+        self.dropout = torch.nn.Dropout(dropout)
         
-    def forward(self, channels, output_dims):
-        return torch.nn.Sequential(torch.nn.Conv2d(channels, 32, 8, 4),
-                                   torch.nn.ReLU(),
-                                   torch.nn.Conv2d(32, 64, 4, 2),
-                                   torch.nn.ReLU(),
-                                   torch.nn.Conv2d(64, 64, 3, 1),
-                                   torch.nn.ReLU(),
-                                   torch.nn.Flatten(),
-                                   torch.nn.Linear(64 * 11 * 11, 512),
-                                   torch.nn.ReLU(),
-                                   torch.nn.Linear(512, output_dims))
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.dropout(x)
+        x = torch.nn.ReLU()
+        x = self.layer2(x)
+        
+        return x
+    
+    def calculate_stepwise_return(self, rewards, discount_factor):
+        returns = []
+        reward = 0
+        
+        for r in rewards:
+            reward = r + reward * discount_factor
+            returns.append(reward)
+            
+        returns = torch.tensor(returns)
+        normalized_return = (returns - returns.mean()) / returns.std()
+        
+        return normalized_return
+    
         
 class DeepQLearning():
     def __init__(self, 
@@ -47,7 +60,8 @@ class DeepQLearning():
                  epsilon_decay: float, 
                  discount_rate: float):
         self.env = env
-        self.q_values = defaultdict(lambda: numpy.zeros(env.action_space.n))
+        # self.q_values = defaultdict(lambda: numpy.zeros(env.action_space.n))
+        self.actions = 5
         self.learning_rate = learning_rate
         self.epsilon = initial_epsilon
         self.final_epsilon = final_epsilon
@@ -59,14 +73,16 @@ class DeepQLearning():
         if (numpy.random.random() < self.epsilon):
             return self.env.action_space.sample()
         else:
-            return int(numpy.max(self.q_values[tuple(obs.flatten())]))
+            # return int(numpy.max(self.q_values[tuple(obs.flatten())]))
+            pass
         
     def step(self, obs: tuple[int, int, bool], action: int, reward: float, next_obs: tuple[int, int, bool]):
-        q_value = numpy.max(self.q_values[tuple(next_obs.flatten())])
-        current_q_value = numpy.max(self.q_values[tuple(obs.flatten())])
-        temporal_difference = current_q_value + self.epsilon * (reward + self.discount_rate * q_value) - q_value
-        self.q_values[tuple(obs.flatten())][action] = self.q_values[tuple(obs.flatten())][action] + self.learning_rate * temporal_difference
-        self.training_error.append(temporal_difference)
+        # q_value = numpy.max(self.q_values[tuple(next_obs.flatten())])
+        # current_q_value = numpy.max(self.q_values[tuple(obs.flatten())])
+        # temporal_difference = current_q_value + self.epsilon * (reward + self.discount_rate * q_value) - q_value
+        # self.q_values[tuple(obs.flatten())][action] = self.q_values[tuple(obs.flatten())][action] + self.learning_rate * temporal_difference
+        # self.training_error.append(temporal_difference)
+        pass
         
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
