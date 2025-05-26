@@ -1,57 +1,51 @@
 import gymnasium as gym
+import torch
 import keyboard
 import ai
 import cv2
+import numpy
 
-class ImageEnv():
-    def __init__(self):
-        pass
+class ImageEnv(gym.Wrapper):
+    def __init__(self, env, skip_frames=4, stack_frames=4, **kwargs):
+        super.__init__(ImageEnv, self).__init__(env, **kwargs)
+        self.skip_frames = skip_frames
+        self.stack_frames = stack_frames
     
     def preprocess(self, image):
         image = cv2.resize(image, (84, 84))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) / 255.0
         
         return image
+    
+    def reset(self):
+        state, info = env.reset()
+        
+        for i in range(50):
+            state, reward, terminated, truncated, info = self.env.step(0)
+
+        state = self.preprocess(state)
+        self.stack_frames = numpy.tile(state, (self.stack_frames, 1, 1))
+        
+        return self.stack_frames, info
+    
+    def step(self, action):
+        reward = 0
+
+        for i in range(self.skip_frames):
+            state, r, terminated, truncated, info = self.env.step(action)
+            reward += r
+
+            if (terminated or truncated):
+                break
+
+        state = self.preprocess(state)
+        self.stack_frames = numpy.concatenate((self.stack_frames[1:], state[numpy.newaxis]), axis=0)
+
+        return self.stack_frames, reward, terminated, truncated, info
 
 env = gym.make("CarRacing-v3",
-               render_mode="human",
-               lap_complete_percent=0.95,
-               domain_randomize=False,
-               continuous=True) 
-max_epoch = 500
-learning_rate = 0.01
-episodes = 100_000
-start_epsilon = 1
-epsilon_decay = start_epsilon / (episodes / 2)
-end_epsilon = 0.1
-input_dims = 96*96*1
-hidden_dims = 128
-output_dims = 5
-dropout = 0.5
+               continuous=False) 
+env = ImageEnv(env)
 
-agent = ai.DeepQLearning(env, learning_rate, start_epsilon, end_epsilon, epsilon_decay, 0.95)
-neural_network = ai.NeuralNetwork(input_dims, hidden_dims, output_dims, dropout)
-
-def car_race():
-    for episode in range(episodes):
-        observation, info = env.reset()
-        done = False
-        pressed = False
-        
-        while (not done):
-            action = agent.do_action(observation)
-            next_obs, reward, terminated, truncated, info = env.step(action)
-            agent.step(observation, action, reward, next_obs)
-
-            done = terminated or truncated
-            
-            # if keyboard.is_pressed("q"):
-            #     pressed = True
-            #     break
-            
-        agent.decay_epsilon()
-            
-        if pressed == True:
-            break
-        
-    env.close()
+state, info = env.reset()
+print(state.shape)
