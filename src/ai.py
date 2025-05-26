@@ -18,71 +18,134 @@ class Optimizer:
         pass
 
 class NeuralNetwork(torch.nn.Module):
-    def __init__(self, input_dims, hidden_dims, output_dims, dropout):
+    def __init__(self, state_dims, action_dims):
         # 96x96 RGB (to be Grayscaled) image
         # The reward is -0.1 every frame and +1000/N for every track tile visited, 
         # where N is the total number of tiles visited in the track. 
         # For example, if you have finished in 732 frames, your reward is 1000 - 0.1*732 = 926.8 points.
 
         super(NeuralNetwork, self).__init__()
-        self.layer1 = torch.nn.Linear(input_dims, hidden_dims)
-        self.layer2 = torch.nn.Linear(hidden_dims, output_dims)
-        self.dropout = torch.nn.Dropout(dropout)
+        self.conv1 = torch.nn.Conv2d(state_dims, 16, 8, 4)
+        self.conv2 = torch.nn.Conv2d(16, 32, 4, 2)
+        self.in_features = 32 * 9 * 9
+        self.fc1 = torch.nn.Linear(self.in_features, 256)
+        self.fc2 = torch.nn.Linear(256, action_dims)
         
     def forward(self, x):
-        x = self.layer1(x)
-        x = self.dropout(x)
+        x = self.conv1(x)
         x = torch.nn.ReLU()
-        x = self.layer2(x)
-        
+        x = self.conv2(x)
+        x = torch.nn.ReLU()
+        x = self.fc1(x)
+        x = self.fc2(x)
+
         return x
     
-    def calculate_stepwise_return(self, rewards, discount_factor):
-        returns = []
-        reward = 0
-        
-        for r in rewards:
-            reward = r + reward * discount_factor
-            returns.append(reward)
-            
-        returns = torch.tensor(returns)
-        normalized_return = (returns - returns.mean()) / returns.std()
-        
-        return normalized_return
+class ReplayBuffer():
+    def __init__(self, state_dims, action_dims, max_size=int(1e5)):
+        self.state = numpy.zeros((max_size, *state_dims), dtype=numpy.float32)
+        self.action = numpy.zeros((max_size, *action_dims), dtype=numpy.int64)
+        self.reward = numpy.zeros((max_size, 1), dtype=numpy.float32)
+        self.next_state = numpy.zeros((max_size, *state_dims), dtype=numpy.float32)
+        self.terminated = numpy.zeros((max_size, 1), dtype=numpy.float32)
+
+        self.ptr = 0
+        self.size = 0
+        self.max_size = max_size
+
+    def update(self, state, action, reward, next_state, terminated):
+        self.state[self.ptr] = state
+        self.action[self.ptr] = action
+        self.reward[self.ptr] = reward
+        self.next_state[self.ptr] = next_state
+        self.terminated[self.ptr] = terminated
+
+        self.ptr = (1 + self.ptr) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+    def sample(self, batch_size):
+        random_index = numpy.random.randint(0, self.size, batch_size)
+        return (
+            torch.FloatTensor(self.state[random_index]),
+            torch.FloatTensor(self.action[random_index]),
+            torch.FloatTensor(self.reward[random_index]),
+            torch.FloatTensor(self.next_state[random_index]),
+            torch.FloatTensor(self.terminated[random_index])
+        )
     
-        
 class DeepQLearning():
-    def __init__(self, 
-                 env: gymnasium.Env, 
-                 learning_rate: float, 
-                 initial_epsilon: float, 
-                 final_epsilon: float, 
-                 epsilon_decay: float, 
-                 discount_rate: float):
-        self.env = env
-        # self.q_values = defaultdict(lambda: numpy.zeros(env.action_space.n))
-        self.actions = 5
-        self.learning_rate = learning_rate
-        self.epsilon = initial_epsilon
-        self.final_epsilon = final_epsilon
-        self.epsilon_decay = epsilon_decay
-        self.discount_rate = discount_rate
-        self.training_error = []
-        
-    def do_action(self, obs: tuple[int, int, bool]) -> int:
-        if (numpy.random.random() < self.epsilon):
-            return self.env.action_space.sample()
+    def __init__(
+            self, 
+            state_dims,
+            action_dims,
+            learning_rate=0.00025, 
+            epsilon=1.0, 
+            epsilon_min=0.1, 
+            gamma=0.99,
+            batch_size=32, 
+            warmup_steps=5000,
+            buffer_size=int(1e5),
+            target_update_interval=10000):
+        self.action_dims = action_dims
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.target_update_interval = target_update_interval
+        self.warmup_steps = warmup_steps
+
+        self.network = NeuralNetwork(state_dims[0], self.action_dims)
+        self.target_network = NeuralNetwork(state_dims[0], self.action_dims)
+        self.target_network.load_state_dict(self.network.state_dict())
+        self.optimizer = torch.optim.RMSprop(self.network.parameters(), lr=learning_rate)
+
+        self.buffer = ReplayBuffer(state_dims, (1,), buffer_size)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.network.to(self.device)
+        self.target_network.to(self.device)
+
+        self.total_steps = 0
+        self.epsilon_decay = (epsilon - epsilon_min) / 1e6
+
+    def act(self, x, training=True):
+        torch.no_grad()
+        self.network.train(training)
+
+        if (training and (numpy.random.random() > self.epsilon) or (self.total_steps < self.warmup_steps)):
+            action = numpy.random.random(0, self.action_dims)
         else:
-            # return int(numpy.max(self.q_values[tuple(obs.flatten())]))
-            pass
-        
-    def step(self, obs: tuple[int, int, bool], action: int, reward: float, next_obs: tuple[int, int, bool]):
-        # q_value = numpy.max(self.q_values[tuple(next_obs.flatten())])
-        # current_q_value = numpy.max(self.q_values[tuple(obs.flatten())])
-        # temporal_difference = current_q_value + self.epsilon * (reward + self.discount_rate * q_value) - q_value
-        # self.q_values[tuple(obs.flatten())][action] = self.q_values[tuple(obs.flatten())][action] + self.learning_rate * temporal_difference
-        # self.training_error.append(temporal_difference)
-        pass
-        
-    def decay_epsilon(self):
-        self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
+            x = torch.from_numpy(x).unsqueeze(0).to(self.device)
+            q_value = self.network(x)
+            action = torch.argmax(q_value).item()
+
+        return action
+    
+    def learn(self):
+        state, action, reward, next_state, terminated = map(lambda x: x.to(self.device), self.buffer.sample(self.batch_size))
+        next_q_value = self.target_network(next_state).detach()
+        td_target = reward + (1 - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
+        loss = torch.nn.functional.mse_loss(self.network(state).gather(1, action.long()), td_target)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        result = {
+            'total_steps': self.total_steps,
+            'value_loss': loss.item()
+        }
+
+        return result
+    
+    def process(self, transition):
+        result = {}
+        self.total_steps += 1
+        self.buffer.update(*transition)
+
+        if self.total_steps > self.warmup_steps:
+            result = self.learn()
+
+        if self.total_steps % self.target_update_interval == 0:
+            self.target_network.load_state_dict(self.network.state_dict())
+
+        self.epsilon -= self.epsilon_decay
+
+        return result
