@@ -77,7 +77,7 @@ class DeepQLearning():
             self, 
             state_dims,
             action_dims,
-            learning_rate=0.00025, 
+            learning_rate=0.01, 
             epsilon=1.0, 
             epsilon_min=0.1, 
             gamma=0.99,
@@ -109,7 +109,7 @@ class DeepQLearning():
     def act(self, x, training=True):
         self.network.train(training)
 
-        if (training and (numpy.random.random() > self.epsilon) or (self.total_steps < self.warmup_steps)):
+        if (training and (numpy.random.random() < self.epsilon) or (self.total_steps < self.warmup_steps)):
             action = numpy.random.randint(0, self.action_dims)
         else:
             x = torch.from_numpy(x).float().unsqueeze(0).to(self.device)
@@ -121,7 +121,7 @@ class DeepQLearning():
     def learn(self):
         state, action, reward, next_state, terminated = map(lambda x: x.to(self.device), self.buffer.sample(self.batch_size))
         next_q_value = self.target_network(next_state).detach()
-        td_target = reward + (1 - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
+        td_target = reward + (1. - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
         loss = torch.nn.functional.mse_loss(self.network(state).gather(1, action.long()), td_target)
         self.optimizer.zero_grad()
         loss.backward()
