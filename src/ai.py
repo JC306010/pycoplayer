@@ -77,7 +77,7 @@ class DeepQLearning():
             self, 
             state_dims,
             action_dims,
-            learning_rate=0.00025, 
+            learning_rate=0.01, 
             epsilon=1.0, 
             epsilon_min=0.1, 
             gamma=0.99,
@@ -109,7 +109,7 @@ class DeepQLearning():
     def act(self, x, training=True):
         self.network.train(training)
 
-        if (training and (numpy.random.random() > self.epsilon) or (self.total_steps < self.warmup_steps)):
+        if (training and (numpy.random.random() < self.epsilon) or (self.total_steps < self.warmup_steps)):
             action = numpy.random.randint(0, self.action_dims)
         else:
             x = torch.from_numpy(x).float().unsqueeze(0).to(self.device)
