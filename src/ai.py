@@ -25,17 +25,16 @@ class NeuralNetwork(torch.nn.Module):
         # For example, if you have finished in 732 frames, your reward is 1000 - 0.1*732 = 926.8 points.
 
         super(NeuralNetwork, self).__init__()
-        self.conv1 = torch.nn.Conv2d(state_dims, 16, 8, 4)
-        self.conv2 = torch.nn.Conv2d(16, 32, 4, 2)
+        self.conv1 = torch.nn.Conv2d(state_dims, 16, kernel_size=8, stride=4)
+        self.conv2 = torch.nn.Conv2d(16, 32, kernel_size=4, stride=2)
         self.in_features = 32 * 9 * 9
         self.fc1 = torch.nn.Linear(self.in_features, 256)
         self.fc2 = torch.nn.Linear(256, action_dims)
         
     def forward(self, x):
-        x = self.conv1(x)
-        x = torch.nn.ReLU()
-        x = self.conv2(x)
-        x = torch.nn.ReLU()
+        x = torch.nn.functional.relu(self.conv1(x))
+        x = torch.nn.functional.relu(self.conv2(x))
+        x = x.view((-1, self.in_features))
         x = self.fc1(x)
         x = self.fc2(x)
 
@@ -106,14 +105,14 @@ class DeepQLearning():
         self.total_steps = 0
         self.epsilon_decay = (epsilon - epsilon_min) / 1e6
 
+    @torch.no_grad()
     def act(self, x, training=True):
-        torch.no_grad()
         self.network.train(training)
 
         if (training and (numpy.random.random() > self.epsilon) or (self.total_steps < self.warmup_steps)):
-            action = numpy.random.random(0, self.action_dims)
+            action = numpy.random.randint(0, self.action_dims)
         else:
-            x = torch.from_numpy(x).unsqueeze(0).to(self.device)
+            x = torch.from_numpy(x).float().unsqueeze(0).to(self.device)
             q_value = self.network(x)
             action = torch.argmax(q_value).item()
 
