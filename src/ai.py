@@ -121,7 +121,7 @@ class DeepQLearning():
     def learn(self):
         state, action, reward, next_state, terminated = map(lambda x: x.to(self.device), self.buffer.sample(self.batch_size))
         next_q_value = self.target_network(next_state).detach()
-        td_target = reward + (1 - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
+        td_target = reward + (1. - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
         loss = torch.nn.functional.mse_loss(self.network(state).gather(1, action.long()), td_target)
         self.optimizer.zero_grad()
         loss.backward()

@@ -2,7 +2,6 @@ from screen import ImageType
 import screen
 import cv2
 import torchvision.models
-import pydirectinput
 
 Region = {
     "top": 300,
