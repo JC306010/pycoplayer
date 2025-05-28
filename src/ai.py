@@ -92,7 +92,7 @@ class DeepQLearning():
         self.network = NeuralNetwork(state_dims[0], self.action_dims)
         self.target_network = NeuralNetwork(state_dims[0], self.action_dims)
         if (os.path.exists("dqn.pt")):
-            self.network.load_state_dict(torch.load("dqn.pt", weights_only=True)) 
+            self.network.load_state_dict(torch.load("dqn.pt")) 
 
         self.target_network.load_state_dict(self.network.state_dict())
         self.optimizer = torch.optim.RMSprop(self.network.parameters(), lr=learning_rate)
@@ -121,7 +121,7 @@ class DeepQLearning():
     def learn(self):
         state, action, reward, next_state, terminated = map(lambda x: x.to(self.device), self.buffer.sample(self.batch_size))
         next_q_value = self.target_network(next_state).detach()
-        td_target = reward + (1. - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
+        td_target = reward + (1 - terminated) * self.gamma * next_q_value.max(dim=1, keepdim=True).values
         loss = torch.nn.functional.mse_loss(self.network(state).gather(1, action.long()), td_target)
         self.optimizer.zero_grad()
         loss.backward()
