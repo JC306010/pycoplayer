@@ -105,9 +105,8 @@ for episode in tqdm(range(n_episodes)):
 
         done = terminated or truncated
         obs = next_obs
-        
+
     agent.decay_epsilon()
-    
 
 def get_moving_avgs(arr, window, convolution_mode):
     return np.convolve(
@@ -117,7 +116,7 @@ def get_moving_avgs(arr, window, convolution_mode):
     ) / window
 
 rolling_length = 500
-fig, axs = plt.subplots(ncols=3, figsize=(12, 5))
+fig, axs = plt.subplots(ncols=2, figsize=(12, 5))
 
 axs[0].set_title("Episode rewards")
 reward_moving_average = get_moving_avgs(
@@ -127,21 +126,13 @@ reward_moving_average = get_moving_avgs(
 )
 axs[0].plot(range(len(reward_moving_average)), reward_moving_average)
 
-axs[1].set_title("Episode lengths")
-length_moving_average = get_moving_avgs(
-    env.length_queue,
-    rolling_length,
-    "valid"
-)
-axs[1].plot(range(len(length_moving_average)), length_moving_average)
-
-axs[2].set_title("Training Error")
+axs[1].set_title("Training Error")
 training_error_moving_average = get_moving_avgs(
     agent.training_error,
     rolling_length,
     "same"
 )
-axs[2].plot(range(len(training_error_moving_average)), training_error_moving_average)
+axs[1].plot(range(len(training_error_moving_average)), training_error_moving_average)
 plt.tight_layout()
 plt.show()
 
