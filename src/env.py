@@ -6,6 +6,8 @@ import cv2
 import numpy
 import IPython
 import matplotlib.pyplot as plt
+import string
+import random
 
 class ImageEnv(gym.Wrapper):
     def __init__(self, env, skip_frames=4, stack_frames=4, **kwargs):
@@ -46,7 +48,8 @@ class ImageEnv(gym.Wrapper):
         return self.stacked_frames, reward, terminated, truncated, info
 
 env = gym.make("CarRacing-v3",
-               continuous=False) 
+               continuous=False,
+               render_mode="human") 
 env = ImageEnv(env)
 
 max_steps = int(2e6)
@@ -82,15 +85,10 @@ def evaulate(n_evals=5):
     return numpy.round(scores / n_evals, 4)
 
 def animate(imgs, video_name, _return=False):
-    import cv2
-    import os
-    import string
-    import random
-    
     if video_name is None:
         video_name = ''.join(random.choice(string.ascii_letters) for i in range(18)) + '.webm'
     height, width, layers = imgs[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'VP90')
+    fourcc = cv2.VideoWriter.fourcc(*"VP90")
     video = cv2.VideoWriter(video_name, fourcc, 10, (width, height))
     
     for img in imgs:
@@ -130,11 +128,11 @@ while True:
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.grid(axis='y')
-        plt.show()
         
         torch.save(deep_q.network.state_dict(), "dqn.pt")
         
     if deep_q.total_steps > max_steps:
+        plt.show()
         break
     
 animate(frames)

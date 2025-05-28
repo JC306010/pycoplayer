@@ -1,9 +1,6 @@
 import torch
-import torch.optim.optimizer
-import torchvision.models
-import gymnasium
-from collections import defaultdict
 import numpy
+import os.path
 
 class Optimizer:
     def __init__(self, model: torch.nn.Module, optimizer_type="adam"):
@@ -94,6 +91,9 @@ class DeepQLearning():
 
         self.network = NeuralNetwork(state_dims[0], self.action_dims)
         self.target_network = NeuralNetwork(state_dims[0], self.action_dims)
+        if (os.path.exists("dqn.pt")):
+            self.network.load_state_dict(torch.load("dqn.pt", weights_only=True)) 
+
         self.target_network.load_state_dict(self.network.state_dict())
         self.optimizer = torch.optim.RMSprop(self.network.parameters(), lr=learning_rate)
 
