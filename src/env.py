@@ -48,8 +48,7 @@ class ImageEnv(gym.Wrapper):
         return self.stacked_frames, reward, terminated, truncated, info
 
 env = gym.make("CarRacing-v3",
-               continuous=False,
-               render_mode="human") 
+               continuous=False) 
 env = ImageEnv(env)
 
 max_steps = int(2e6)
@@ -84,7 +83,7 @@ def evaulate(n_evals=5):
         
     return numpy.round(scores / n_evals, 4)
 
-def animate(imgs, video_name, _return=False):
+def animate(imgs, video_name=None, _return=False):
     if video_name is None:
         video_name = ''.join(random.choice(string.ascii_letters) for i in range(18)) + '.webm'
     height, width, layers = imgs[0].shape
@@ -130,6 +129,7 @@ while True:
         plt.grid(axis='y')
         
         torch.save(deep_q.network.state_dict(), "dqn.pt")
+        print("saved")
         
     if deep_q.total_steps > max_steps:
         plt.show()
